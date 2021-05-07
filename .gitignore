@@ -1,0 +1,19 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+# C extensions
+*.so
+
+# Distribution / packaging
+*.egg-info/
+*.egg
+
+# OS X
+.DS_Store
+
+# VS Code
+.vscode/*
+
+# Barcodes
+barcodes/*
