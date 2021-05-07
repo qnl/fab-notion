@@ -63,21 +63,30 @@ def scanner(queue, lock):
         queue.put(item_id)
 
 def item_tracker(queue, client, lock):
+    flag = -1
     while True: 
         item_id = queue.get()
+        
+        if item_id == 'd8701fa4-af0b-11eb-8529-0242ac130003':
+            flag = -1
+            continue
+        elif item_id == '153a3d34-af0c-11eb-8529-0242ac130003':
+            flag = 1
+            continue
+        
         lock.acquire()
         try:
             item = client.get_block(item_id)
             item.refresh()
-            current = item.stock
-            item.stock = current - 1 if current else 0
+            current = item.stock if item.stock is not None else 0
+            item.stock = max(current + flag, 0)
             print(f'Processing item: {item.title}')
         except Exception as e:
             print(f'{type(e).__name__} when scanning {item_id}.')
         lock.release()
 
 
-def create_barcode(item, barcode_dir='barcodes', btype='code128', font='Roboto'):
+def create_barcode(item, barcode_dir='barcodes', btype='code128', font='sans-serif'):
     code = base64.b64encode(uuid.UUID(hex=item.id).bytes).decode('utf-8')
 
     svg = barcode.get(btype, code).render(
@@ -92,7 +101,7 @@ def create_barcode(item, barcode_dir='barcodes', btype='code128', font='Roboto')
     ])
 
     slug = slugify(item.title)
-    filename = Path(barcode_dir)/f'{slug}-b64.svg'
+    filename = Path(barcode_dir)/f'{slug}.svg'
     with open(filename, 'wb') as f:
         f.write(svg)
     return filename
