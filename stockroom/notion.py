@@ -1,3 +1,5 @@
+import os
+import requests
 import mimetypes
 
 from notion.operations import build_operation

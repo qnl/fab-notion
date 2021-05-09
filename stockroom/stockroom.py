@@ -1,9 +1,8 @@
 import json
 import uuid
 import base64
-import requests
-import os
 import logging
+import sys
 
 import barcode
 
@@ -52,10 +51,7 @@ def item_tracker(queue, client, lock):
             logger.warning(f'{type(e).__name__} when scanning {item_id}.')
         lock.release()
 
-
-def create_barcode(item, barcode_dir='barcodes', btype='code128', font='sans-serif'):
-    code = base64.b64encode(uuid.UUID(hex=item.id).bytes).decode('utf-8')
-
+def create_barcode(code, text, barcode_dir='barcodes', btype='code128', font='sans-serif'):
     svg = barcode.get(btype, code).render(
         text=item.title,
         writer_options=dict(quiet_zone=15, module_height=20)
@@ -67,11 +63,15 @@ def create_barcode(item, barcode_dir='barcodes', btype='code128', font='sans-ser
         ) if b'<text' in line else line for line in svg.splitlines() 
     ])
 
-    slug = slugify(item.title)
-    filename = Path(barcode_dir)/f'{slug}.svg'
+    filename = Path(barcode_dir)/f'{text}.svg'
     with open(filename, 'wb') as f:
         f.write(svg)
     return filename
+
+def create_item_barcode(item):
+    code = base64.b64encode(uuid.UUID(hex=item.id).bytes).decode('utf-8')
+    text = slugify(item.title)
+    return create_barcode(code, text)
 
 def barcode_updater(client, supply_db, lock):
     while True:
@@ -100,6 +100,14 @@ def status_updater(status, lock):
         sleep(60)
 
 if __name__ == '__main__':
+    logger.setLevel(logging.INFO)
+    ch = logging.StreamHandler(stream=sys.stdout)
+    ch.setLevel(logging.INFO)
+    formatter = logging.Formatter('[%(asctime)s] [%(relativeCreated)6d] - %(message)s', datefmt='%Y-%m-%dT%H:%M:%S')
+    ch.setFormatter(formatter)
+    logger.addHandler(ch)
+    logger.info('Testing')
+
     with open('config.json') as f:
         config = json.load(f)
 
