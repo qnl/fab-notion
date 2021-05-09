@@ -1,12 +1,11 @@
 import json
 import uuid
 import base64
-import mimetypes
 import requests
 import os
+import logging
 
 import barcode
-# from barcode.writer import SVGWriter
 
 import datetime as dt
 
@@ -16,49 +15,17 @@ from threading import Thread, Lock
 from pathlib import Path
 from slugify import slugify
 
-
 from requests.exceptions import HTTPError
 
 from notion.client import NotionClient
-from notion.operations import build_operation
+from stockroom.notion import upload_file_to_row_property
 
-def upload_file_to_row_property(client, row, path, prop):
-    mimetype = mimetypes.guess_type(path)[0] or 'text/plain'
-    filename = os.path.split(path)[-1]
-    data = client.post(
-        'getUploadFileUrl',
-        {'bucket': 'secure', 'name': filename, 'contentType': mimetype}
-    ).json()
-    
-    ids = {p['name']: p['id'] for p in row.schema}
-
-    with open(path, "rb") as f:
-        response = requests.put(data['signedPutUrl'], data=f, headers={'Content-type': mimetype})
-        response.raise_for_status()
-    
-    simpleurl = data['signedGetUrl'].split('?')[0]
-    file_id = simpleurl.split('/')[-2]
-    client.submit_transaction([
-        build_operation(
-            id=row.id,
-            path=['properties', ids[prop]],
-            args=[[filename, [['a', simpleurl]]]],
-            table='block',
-            command='set'
-        ),
-        build_operation(
-            id=row.id,
-            path=['file_ids'],
-            args={'id': file_id},
-            table='block',
-            command='listAfter'
-        )
-    ])
+logger = logging.getLogger(__name__)
 
 def scanner(queue, lock):
     while True:
         barcode = input()
-        print(f'Barcode scanned: {barcode}')
+        logger.info(f'Barcode scanned: {barcode}')
         item_id = str(uuid.UUID(base64.b64decode(barcode).hex()))
         queue.put(item_id)
 
@@ -80,9 +47,9 @@ def item_tracker(queue, client, lock):
             item.refresh()
             current = item.stock if item.stock is not None else 0
             item.stock = max(current + flag, 0)
-            print(f'Processing item: {item.title}')
+            logger.info(f'Processing item: {item.title}')
         except Exception as e:
-            print(f'{type(e).__name__} when scanning {item_id}.')
+            logger.warning(f'{type(e).__name__} when scanning {item_id}.')
         lock.release()
 
 
@@ -113,7 +80,7 @@ def barcode_updater(client, supply_db, lock):
         
         for item in items:
             if not item.barcode:
-                print(f'Creating barcode for {item.title}')
+                logger.info(f'Creating barcode for {item.title}')
                 filename = create_barcode(item)
                 upload_file_to_row_property(client, item, filename, 'Barcode')
         lock.release()
@@ -141,7 +108,7 @@ if __name__ == '__main__':
     
     try:
         client = NotionClient(token_v2=config['token'])
-        print('Logged in with token')
+        logger.info('Logged in with token')
     except HTTPError as e:
         if e.response.status_code in [401, 403]:
             client = NotionClient(email=config['email'], password=config['password'])
@@ -149,7 +116,7 @@ if __name__ == '__main__':
 
             with open('config.json', 'w') as f:
                 json.dump(config, f, indent=4)
-            print('Updated token')
+            logger.info('Updated token')
             
     status = client.get_block(config['status'])
     supply_db = client.get_collection_view(config['supplies'])
