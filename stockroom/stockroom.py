@@ -30,6 +30,8 @@ def scanner(queue, lock):
             queue.put(item_id)
         except ValueError:
             logger.warning('Scanned barcode is not base 64 encoded UUID')
+        except Exception as e:
+            logger.warning(f'{type(e).__name__} when scanning {item_id}.')
 
 def item_tracker(queue, client, lock):
     flag = -1
@@ -51,7 +53,7 @@ def item_tracker(queue, client, lock):
             item.stock = max(current + flag, 0)
             logger.info(f'Processing item: {item.title}')
         except Exception as e:
-            logger.warning(f'{type(e).__name__} when scanning {item_id}.')
+            logger.warning(f'{type(e).__name__} when processing {item_id}.')
         lock.release()
 
 def create_barcode(code, text, barcode_dir='barcodes', btype='code128', font='sans-serif'):
@@ -109,7 +111,6 @@ if __name__ == '__main__':
     formatter = logging.Formatter('[%(asctime)s] [%(relativeCreated)6d] - %(message)s', datefmt='%Y-%m-%dT%H:%M:%S')
     ch.setFormatter(formatter)
     logger.addHandler(ch)
-    logger.info('Testing')
 
     with open('config.json') as f:
         config = json.load(f)
