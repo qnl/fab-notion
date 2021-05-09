@@ -25,8 +25,11 @@ def scanner(queue, lock):
     while True:
         barcode = input('Scan a code: ')
         logger.info(f'Barcode scanned: {barcode}')
-        item_id = str(uuid.UUID(base64.b64decode(barcode).hex()))
-        queue.put(item_id)
+        try:
+            item_id = str(uuid.UUID(base64.b64decode(barcode).hex()))
+            queue.put(item_id)
+        except ValueError:
+            logger.warning('Scanned barcode is not base 64 encoded UUID')
 
 def item_tracker(queue, client, lock):
     flag = -1
