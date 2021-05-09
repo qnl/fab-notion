@@ -17,13 +17,13 @@ from slugify import slugify
 from requests.exceptions import HTTPError
 
 from notion.client import NotionClient
-from stockroom.notion import upload_file_to_row_property
+from stockroom.notion_utils import upload_file_to_row_property
 
 logger = logging.getLogger(__name__)
 
 def scanner(queue, lock):
     while True:
-        barcode = input()
+        barcode = input('Scan a code: ')
         logger.info(f'Barcode scanned: {barcode}')
         item_id = str(uuid.UUID(base64.b64decode(barcode).hex()))
         queue.put(item_id)
@@ -101,7 +101,7 @@ def status_updater(status, lock):
 
 if __name__ == '__main__':
     logger.setLevel(logging.INFO)
-    ch = logging.StreamHandler(stream=sys.stdout)
+    ch = logging.FileHandler(filename='stockroom.log')
     ch.setLevel(logging.INFO)
     formatter = logging.Formatter('[%(asctime)s] [%(relativeCreated)6d] - %(message)s', datefmt='%Y-%m-%dT%H:%M:%S')
     ch.setFormatter(formatter)
