@@ -90,7 +90,7 @@ def barcode_updater(client, supply_db, lock):
         for item in items:
             if not item.barcode:
                 logger.info(f'Creating barcode for {item.title}')
-                filename = create_barcode(item)
+                filename = create_item_barcode(item)
                 upload_file_to_row_property(client, item, filename, 'Barcode')
         lock.release()
         sleep(60)
