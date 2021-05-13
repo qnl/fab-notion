@@ -62,7 +62,7 @@ def item_tracker(queue, client, lock):
 
 def create_barcode(code, text, barcode_dir='barcodes', btype='code128', font='sans-serif'):
     svg = barcode.get(btype, code).render(
-        text=item.title,
+        text=text,
         writer_options=dict(quiet_zone=15, module_height=20)
     )
 
