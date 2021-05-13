@@ -72,7 +72,12 @@ def create_barcode(code, text, barcode_dir='barcodes', btype='code128', font='sa
         ) if b'<text' in line else line for line in svg.splitlines() 
     ])
 
+    barcode_dir = Path(barcode_dir)
+    if not barcode_dir.exists():
+        barcode_dir.mkdir(parents=True)
+
     filename = Path(barcode_dir)/f'{text}.svg'
+    
     with open(filename, 'wb') as f:
         f.write(svg)
     return filename
